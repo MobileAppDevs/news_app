@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../bloc/user_list_bloc.dart';
@@ -17,10 +16,13 @@ class UserListPageState extends State<UserListPage> {
 
   final _scrollController = ScrollController();
 
+  UserListBloc streamController = UserListBloc();
+
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_loadMoreUsersIfNeed);
+    // _scrollController.addListener(_loadMoreUsersIfNeed);
+    streamController.loadInitUser();
   }
 
   @override
@@ -32,16 +34,18 @@ class UserListPageState extends State<UserListPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bloc = Provider.of<UserListBloc>(context);
+    // _bloc = Provider.of<UserListBloc>(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: _bloc.users,
-      builder: (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
+      stream: streamController.stream,
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        print("snapshot ${snapshot.data}");
         if (snapshot.connectionState == ConnectionState.active) {
           if (snapshot.hasData) {
+            print(snapshot.data);
             return DefaultTabController(
               length: 2,
               child: Scaffold(

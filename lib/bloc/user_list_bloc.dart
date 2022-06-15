@@ -5,13 +5,12 @@ import 'package:flutter/material.dart';
 
 import '../datamodel/UserData.dart';
 import '../repository/user_data_repository.dart';
-import 'base_bloc.dart';
 
-class UserListBloc extends Bloc {
+class UserListBloc {
   static const int intPageSize = 10;
   static const int pageSize = 3;
 
-  late List<UserDataModel> fetchedUserData;
+  late List<UserDataModel> fetchedUserData = [];
   final List<int> _userIds = [];
   final List<UserDataModel> _topUsers = [];
   final _repository = UserDataRepository();
@@ -19,22 +18,28 @@ class UserListBloc extends Bloc {
   var _isLoadingMoreTopUsers = false;
   var _currentUserIndex = 0;
 
-  final StreamController<List<UserDataModel>> _usersStreamController = StreamController();
+  final StreamController usersStreamController = StreamController.broadcast();
 
-  Stream<List<UserDataModel>> get users => _usersStreamController.stream;
+  Stream get stream => usersStreamController.stream;
 
-  UserListBloc() {
-    _loadInitUser();
-  }
+  StreamSink get streamSink => usersStreamController.sink;
 
-  void _loadInitUser() async {
+  StreamSubscription get streamSubscription => stream.listen((event) {});
+
+  // UserListBloc() {
+  //   loadInitUser();
+  // }
+
+  void loadInitUser() async {
     try {
       List<UserDataModel> list = await _repository.loadTopUsers();
-      _usersStreamController.sink.add(list);
+      // _usersStreamController.sink.add(list);
+      print("list is");
+      streamSink.add(list);
       fetchedUserData.addAll(list);
       debugPrint(fetchedUserData.toString());
     } catch (e) {
-      _usersStreamController.sink.addError('Unknown Error');
+      streamSink.addError(e);
       return;
     }
 
@@ -56,7 +61,7 @@ class UserListBloc extends Bloc {
       }
     }
     _currentUserIndex = _topUsers.length;
-    _usersStreamController.sink.add(_topUsers);
+    usersStreamController.sink.add(_topUsers);
     _isLoadingMoreTopUsers = false;
   }
 
@@ -64,7 +69,7 @@ class UserListBloc extends Bloc {
 
   @override
   void dispose() {
-    _usersStreamController.close();
+    usersStreamController.close();
     _repository.dispose();
   }
 }
