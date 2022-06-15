@@ -4,14 +4,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../datamodel/UserData.dart';
-import '../repository/hacker_news_repository.dart';
+import '../repository/user_data_repository.dart';
 import 'base_bloc.dart';
 
 class UserListBloc extends Bloc {
   static const int intPageSize = 10;
   static const int pageSize = 3;
 
-  late UserDataModel fetchedUserData;
+  late List<UserDataModel> fetchedUserData;
   final List<int> _userIds = [];
   final List<UserDataModel> _topUsers = [];
   final _repository = UserDataRepository();
@@ -29,7 +29,9 @@ class UserListBloc extends Bloc {
 
   void _loadInitUser() async {
     try {
-      fetchedUserData = await _repository.loadTopUserIds();
+      List<UserDataModel> list = await _repository.loadTopUsers();
+      _usersStreamController.sink.add(list);
+      fetchedUserData.addAll(list);
       debugPrint(fetchedUserData.toString());
     } catch (e) {
       _usersStreamController.sink.addError('Unknown Error');
@@ -46,7 +48,7 @@ class UserListBloc extends Bloc {
     final UserSize = min(_currentUserIndex + pageSize, _userIds.length);
     for (int index = _currentUserIndex; index < UserSize; index++) {
       try {
-        String str = _repository.loadTopUserIds().toString();
+        String str = _repository.loadTopUsers().toString();
         debugPrint(str);
         // _topUser.add(await _repository.loadUser(_topUserIds[index]));
       } catch (e) {

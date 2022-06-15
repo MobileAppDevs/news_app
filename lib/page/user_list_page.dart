@@ -40,46 +40,51 @@ class UserListPageState extends State<UserListPage> {
     return StreamBuilder(
       stream: _bloc.users,
       builder: (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
-        if (snapshot.hasData) {
-          return DefaultTabController(
-            length: 2,
-            child: Scaffold(
-              appBar: AppBar(
-                title: const Text('Flutter Tabs Demo'),
-                bottom: const TabBar(
-                  tabs: [
-                    Tab(text: "All Users"),
-                    Tab(text: "Selected Users"),
+        if (snapshot.connectionState == ConnectionState.active) {
+          if (snapshot.hasData) {
+            return DefaultTabController(
+              length: 2,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: const Text('Flutter Tabs Demo'),
+                  bottom: const TabBar(
+                    tabs: [
+                      Tab(text: "All Users"),
+                      Tab(text: "Selected Users"),
+                    ],
+                  ),
+                ),
+                body: TabBarView(
+                  children: [
+                    ListView.builder(itemBuilder: (context, index) {
+                      return const ListTile(
+                        title: Text('item'),
+                        // title: Text(snapshot.data![index].login),
+                      );
+                    }),
+                    ListView.separated(
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                            title: Text(
+                          snapshot.data![index].login,
+                          style: const TextStyle(color: Colors.black),
+                        ));
+                      },
+                      separatorBuilder: (context, index) => const VerticalDivider(),
+                      itemCount: snapshot.data!.length,
+                    ),
                   ],
                 ),
               ),
-              body: TabBarView(
-                children: [
-                  ListView.builder(itemBuilder: (context, index) {
-                    return const ListTile(
-                      title: Text('item'),
-                      // title: Text(snapshot.data![index].login),
-                    );
-                  }),
-                  ListView.separated(
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                          title: Text(
-                        snapshot.data![index].login,
-                        style: const TextStyle(color: Colors.black),
-                      ));
-                    },
-                    separatorBuilder: (context, index) => const VerticalDivider(),
-                    itemCount: snapshot.data!.length,
-                  ),
-                ],
-              ),
-            ),
-          );
+            );
+          }
+          if (snapshot.hasError) return Scaffold(body: Center(child: Text('${snapshot.error}')));
+          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
+        } else if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Scaffold(body: Center(child: CircularProgressIndicator())));
+        } else {
+          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
         }
-        // if (snapshot.hasData) return _buildUsers(users: snapshot.data!);
-        if (snapshot.hasError) return Scaffold(body: Center(child: Text('${snapshot.error}')));
-        return const Center(child: Scaffold(body: Center(child: CircularProgressIndicator())));
       },
     );
   }
