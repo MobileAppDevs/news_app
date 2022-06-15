@@ -19,9 +19,12 @@ class UserListBloc extends Bloc {
   var _isLoadingMoreTopUsers = false;
   var _currentUserIndex = 0;
 
-  final StreamController<List<UserDataModel>> _usersStreamController = StreamController();
+  final StreamController<List<UserDataModel>> usersStreamController =
+      StreamController();
 
-  Stream<List<UserDataModel>> get users => _usersStreamController.stream;
+  Stream<List<UserDataModel>> get usersStream => usersStreamController.stream;
+
+  StreamSink get streamSink => usersStreamController.sink;
 
   UserListBloc() {
     _loadInitUser();
@@ -30,15 +33,15 @@ class UserListBloc extends Bloc {
   void _loadInitUser() async {
     try {
       List<UserDataModel> list = await _repository.loadTopUsers();
-      _usersStreamController.sink.add(list);
-      fetchedUserData.addAll(list);
-      debugPrint(fetchedUserData.toString());
+      streamSink.add(list);
+      // fetchedUserData.addAll(list);
+      // debugPrint(fetchedUserData.toString());
     } catch (e) {
-      _usersStreamController.sink.addError('Unknown Error');
+      streamSink.addError('Unknown Error');
       return;
     }
 
-    loadMoreUsers(pageSize: intPageSize);
+    // loadMoreUsers(pageSize: intPageSize);
   }
 
   void loadMoreUsers({int pageSize = pageSize}) async {
@@ -56,7 +59,7 @@ class UserListBloc extends Bloc {
       }
     }
     _currentUserIndex = _topUsers.length;
-    _usersStreamController.sink.add(_topUsers);
+    streamSink.add(_topUsers);
     _isLoadingMoreTopUsers = false;
   }
 
@@ -64,7 +67,7 @@ class UserListBloc extends Bloc {
 
   @override
   void dispose() {
-    _usersStreamController.close();
+    usersStreamController.close();
     _repository.dispose();
   }
 }

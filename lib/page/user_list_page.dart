@@ -13,9 +13,11 @@ class UserListPage extends StatefulWidget {
 }
 
 class UserListPageState extends State<UserListPage> {
-  late UserListBloc _bloc;
+  // late UserListBloc _bloc;
 
   final _scrollController = ScrollController();
+
+  UserListBloc userListBloc = UserListBloc();
 
   @override
   void initState() {
@@ -32,14 +34,16 @@ class UserListPageState extends State<UserListPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bloc = Provider.of<UserListBloc>(context);
+    // _bloc = Provider.of<UserListBloc>(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: _bloc.users,
-      builder: (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
+      stream: userListBloc.usersStream,
+      builder:
+          (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
+        print("snapshot ${snapshot.data}");
         if (snapshot.connectionState == ConnectionState.active) {
           if (snapshot.hasData) {
             return DefaultTabController(
@@ -70,7 +74,8 @@ class UserListPageState extends State<UserListPage> {
                           style: const TextStyle(color: Colors.black),
                         ));
                       },
-                      separatorBuilder: (context, index) => const VerticalDivider(),
+                      separatorBuilder: (context, index) =>
+                          const VerticalDivider(),
                       itemCount: snapshot.data!.length,
                     ),
                   ],
@@ -78,41 +83,47 @@ class UserListPageState extends State<UserListPage> {
               ),
             );
           }
-          if (snapshot.hasError) return Scaffold(body: Center(child: Text('${snapshot.error}')));
-          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
+          if (snapshot.hasError)
+            return Scaffold(body: Center(child: Text('${snapshot.error}')));
+          return const Center(
+              child: Scaffold(body: Center(child: Text('other state'))));
         } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: Scaffold(body: Center(child: CircularProgressIndicator())));
+          return const Center(
+              child:
+                  Scaffold(body: Center(child: CircularProgressIndicator())));
         } else {
-          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
+          return const Center(
+              child: Scaffold(body: Center(child: Text('other state'))));
         }
       },
     );
   }
 
   void _loadMoreUsersIfNeed() {
-    final offsetToEnd = _scrollController.position.maxScrollExtent - _scrollController.position.pixels;
+    final offsetToEnd = _scrollController.position.maxScrollExtent -
+        _scrollController.position.pixels;
     final threshold = MediaQuery.of(context).size.height / 3;
     final shouldLoadMore = offsetToEnd < threshold;
     if (shouldLoadMore) {
-      _bloc.loadMoreUsers();
+      // _bloc.loadMoreUsers();
     }
   }
 
-  Widget _buildUsers({required List<UserDataModel> users}) {
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: _bloc.hasMoreUsers() ? users.length + 1 : users.length,
-      itemBuilder: (BuildContext context, int index) {
-        if (index == users.length) {
-          return const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return _buildUserCardView(userData: users[index]);
-      },
-    );
-  }
+  // Widget _buildUsers({required List<UserDataModel> users}) {
+  //   return ListView.builder(
+  //     controller: _scrollController,
+  //     itemCount: _bloc.hasMoreUsers() ? users.length + 1 : users.length,
+  //     itemBuilder: (BuildContext context, int index) {
+  //       if (index == users.length) {
+  //         return const Padding(
+  //           padding: EdgeInsets.all(8.0),
+  //           child: Center(child: CircularProgressIndicator()),
+  //         );
+  //       }
+  //       return _buildUserCardView(userData: users[index]);
+  //     },
+  //   );
+  // }
 
   Widget _buildUserCardView({required UserDataModel userData}) {
     return Card(
