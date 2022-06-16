@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../datamodel/UserData.dart';
+import '../datamodel/user_data.dart';
 import '../repository/user_data_repository.dart';
 import 'base_bloc.dart';
 
@@ -12,15 +12,15 @@ class UserListBloc extends Bloc {
   static const int pageSize = 3;
 
   late List<UserDataModel> fetchedUserData;
+  late List<UserDataModel> selectedUserList = [];
   final List<int> _userIds = [];
   final List<UserDataModel> _topUsers = [];
   final _repository = UserDataRepository();
 
-  var _isLoadingMoreTopUsers = false;
+  var _isLoadingMoreUsers = false;
   var _currentUserIndex = 0;
 
-  final StreamController<List<UserDataModel>> usersStreamController =
-      StreamController();
+  final StreamController<List<UserDataModel>> usersStreamController = StreamController();
 
   Stream<List<UserDataModel>> get usersStream => usersStreamController.stream;
 
@@ -32,24 +32,20 @@ class UserListBloc extends Bloc {
 
   void _loadInitUser() async {
     try {
-      List<UserDataModel> list = await _repository.loadTopUsers();
-      streamSink.add(list);
-      // fetchedUserData.addAll(list);
-      // debugPrint(fetchedUserData.toString());
+      fetchedUserData = await _repository.loadTopUsers();
+      streamSink.add(fetchedUserData);
     } catch (e) {
       streamSink.addError('Unknown Error');
       return;
     }
-
-    // loadMoreUsers(pageSize: intPageSize);
   }
 
   void loadMoreUsers({int pageSize = pageSize}) async {
-    if (_isLoadingMoreTopUsers) return;
+    if (_isLoadingMoreUsers) return;
 
-    _isLoadingMoreTopUsers = true;
-    final UserSize = min(_currentUserIndex + pageSize, _userIds.length);
-    for (int index = _currentUserIndex; index < UserSize; index++) {
+    _isLoadingMoreUsers = true;
+    final userSize = min(_currentUserIndex + pageSize, _userIds.length);
+    for (int index = _currentUserIndex; index < userSize; index++) {
       try {
         String str = _repository.loadTopUsers().toString();
         debugPrint(str);
@@ -60,7 +56,7 @@ class UserListBloc extends Bloc {
     }
     _currentUserIndex = _topUsers.length;
     streamSink.add(_topUsers);
-    _isLoadingMoreTopUsers = false;
+    _isLoadingMoreUsers = false;
   }
 
   bool hasMoreUsers() => _currentUserIndex < _userIds.length;

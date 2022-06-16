@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../bloc/user_list_bloc.dart';
-import '../datamodel/UserData.dart';
+import '../datamodel/user_data.dart';
 
 class UserListPage extends StatefulWidget {
   const UserListPage({Key? key}) : super(key: key);
@@ -13,7 +12,7 @@ class UserListPage extends StatefulWidget {
 }
 
 class UserListPageState extends State<UserListPage> {
-  // late UserListBloc _bloc;
+  late UserListBloc _bloc;
 
   final _scrollController = ScrollController();
 
@@ -34,16 +33,18 @@ class UserListPageState extends State<UserListPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // _bloc = Provider.of<UserListBloc>(context);
+    _bloc = Provider.of<UserListBloc>(context);
+  }
+
+  void updateSelectedUserList() {
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: userListBloc.usersStream,
-      builder:
-          (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
-        print("snapshot ${snapshot.data}");
+      builder: (BuildContext context, AsyncSnapshot<List<UserDataModel>> snapshot) {
         if (snapshot.connectionState == ConnectionState.active) {
           if (snapshot.hasData) {
             return DefaultTabController(
@@ -52,94 +53,113 @@ class UserListPageState extends State<UserListPage> {
                 appBar: AppBar(
                   title: const Text('Flutter Tabs Demo'),
                   bottom: const TabBar(
+                    key: Key('tabBar'),
                     tabs: [
-                      Tab(text: "All Users"),
-                      Tab(text: "Selected Users"),
+                      Tab(
+                        key: Key('tab1'),
+                        text: "All Users",
+                      ),
+                      Tab(
+                        key: Key('tab2'),
+                        text: "Selected Users",
+                      ),
                     ],
                   ),
                 ),
                 body: TabBarView(
+                  key: const Key('tabBarView'),
                   children: [
-                    ListView.builder(itemBuilder: (context, index) {
-                      return const ListTile(
-                        title: Text('item'),
-                        // title: Text(snapshot.data![index].login),
-                      );
-                    }),
-                    ListView.separated(
+                    ListView.builder(
+                      controller: _scrollController,
+                      itemCount: _bloc.hasMoreUsers() ? snapshot.data!.length + 1 : snapshot.data!.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        if (index == snapshot.data!.length) {
+                          return const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        return User(
+                          user: snapshot.data![index],
+                          listIndex: index,
+                          updatedSelectedUserList: updateSelectedUserList,
+                          userListBloc: userListBloc,
+                        );
+                      },
+                    ),
+                    ListView.builder(
+                      itemCount: userListBloc.selectedUserList.length,
                       itemBuilder: (context, index) {
                         return ListTile(
-                            title: Text(
-                          snapshot.data![index].login,
-                          style: const TextStyle(color: Colors.black),
-                        ));
+                          title: Text(userListBloc.selectedUserList[index].login),
+                          leading: CircleAvatar(backgroundImage: NetworkImage(userListBloc.selectedUserList[index].avatarUrl)),
+                        );
                       },
-                      separatorBuilder: (context, index) =>
-                          const VerticalDivider(),
-                      itemCount: snapshot.data!.length,
                     ),
                   ],
                 ),
               ),
             );
           }
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return Scaffold(body: Center(child: Text('${snapshot.error}')));
-          return const Center(
-              child: Scaffold(body: Center(child: Text('other state'))));
+          }
+          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
         } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child:
-                  Scaffold(body: Center(child: CircularProgressIndicator())));
+          return const Center(child: Scaffold(body: Center(child: CircularProgressIndicator())));
         } else {
-          return const Center(
-              child: Scaffold(body: Center(child: Text('other state'))));
+          return const Center(child: Scaffold(body: Center(child: Text('other state'))));
         }
       },
     );
   }
 
   void _loadMoreUsersIfNeed() {
-    final offsetToEnd = _scrollController.position.maxScrollExtent -
-        _scrollController.position.pixels;
-    final threshold = MediaQuery.of(context).size.height / 3;
-    final shouldLoadMore = offsetToEnd < threshold;
-    if (shouldLoadMore) {
-      // _bloc.loadMoreUsers();
-    }
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent) {}
+    // final offsetToEnd = _scrollController.position.maxScrollExtent - _scrollController.position.pixels;
+    // final threshold = MediaQuery.of(context).size.height / 3;
+    // final shouldLoadMore = offsetToEnd < threshold;
+    // if (shouldLoadMore) {
+    //   _bloc.loadMoreUsers();
+    // }
   }
+}
 
-  // Widget _buildUsers({required List<UserDataModel> users}) {
-  //   return ListView.builder(
-  //     controller: _scrollController,
-  //     itemCount: _bloc.hasMoreUsers() ? users.length + 1 : users.length,
-  //     itemBuilder: (BuildContext context, int index) {
-  //       if (index == users.length) {
-  //         return const Padding(
-  //           padding: EdgeInsets.all(8.0),
-  //           child: Center(child: CircularProgressIndicator()),
-  //         );
-  //       }
-  //       return _buildUserCardView(userData: users[index]);
-  //     },
-  //   );
-  // }
+class User extends StatefulWidget {
+  const User({Key? key, required this.user, required this.listIndex, required this.updatedSelectedUserList, required this.userListBloc}) : super(key: key);
 
-  Widget _buildUserCardView({required UserDataModel userData}) {
+  final UserDataModel user;
+  final int listIndex;
+  final void Function() updatedSelectedUserList;
+  final UserListBloc userListBloc;
+
+  @override
+  State<User> createState() => _UserState();
+}
+
+class _UserState extends State<User> {
+  @override
+  Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        title: Text(userData.login),
-        subtitle: Text(userData.avatarUrl),
-        onTap: () => _launchUrl(userData.url),
+        title: Text(widget.user.login),
+        leading: CircleAvatar(backgroundImage: NetworkImage(widget.user.avatarUrl)),
+        trailing: Checkbox(
+          value: widget.user.isSelected,
+          onChanged: (value) async {
+            widget.user.isSelected = value;
+            setState(() {});
+            await GetStorage().write(widget.listIndex.toString(), widget.user);
+            if (value!) {
+              widget.userListBloc.selectedUserList.add(widget.user);
+              widget.updatedSelectedUserList();
+            } else {
+              widget.userListBloc.selectedUserList.removeWhere((element) => element == widget.user);
+              widget.updatedSelectedUserList();
+            }
+          },
+        ),
       ),
     );
-  }
-
-  void _launchUrl(String url) async {
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    } else {
-      throw 'Could not launch $url';
-    }
   }
 }
